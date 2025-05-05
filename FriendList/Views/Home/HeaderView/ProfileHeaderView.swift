@@ -12,8 +12,8 @@ class ProfileHeaderView: UIView {
 
     //MARK: Properties
     
-    //MARK: SubViews
     
+    //MARK: SubViews
     private let infoContainerView: UIView = {
         let view = UIView()
         view.backgroundColor = .whiteTwo
@@ -34,13 +34,13 @@ class ProfileHeaderView: UIView {
         label.font = UIFont.systemFont(ofSize: 17, weight: .medium)
         label.textColor = UIColor.black
         label.textAlignment = .left
-        label.text = "紫晽"
+        label.text = ""
         return label
     }()
     
-    private let settingBtn: UIButton = {
+    private let kokoIDBtn: UIButton = {
         let btn = UIButton(type: .system)
-        btn.setTitle("設定 KOKO ID", for: .normal)
+        btn.setTitle("", for: .normal)
         btn.setTitleColor(.lbLightGrey, for: .normal)
         btn.titleLabel?.font = UIFont.systemFont(ofSize: 13, weight: .regular)
         btn.setImage(UIImage(named: "icInfoBackDeepGray"), for: .normal)
@@ -60,7 +60,6 @@ class ProfileHeaderView: UIView {
     
     
     //MARK: init
-    
     override init(frame: CGRect) {
         super.init(frame: frame)
         configureUI()
@@ -71,14 +70,19 @@ class ProfileHeaderView: UIView {
     }
     
     
-    //MARK: private function
+    //MARK: public function
+    func setUserInfo(info: UserInfo) {
+        nameLabel.text = info.name
+        kokoIDBtn.setTitle("KOKO ID：\(info.kokoid)", for: .normal)
+    }
     
+    //MARK: private function
     private func configureUI() {
         addSubviews(infoContainerView)
         infoContainerView.addSubviews(avatarImageView, nameStackView)
         
         nameStackView.addArrangedSubview(nameLabel)
-        nameStackView.addArrangedSubview(settingBtn)
+        nameStackView.addArrangedSubview(kokoIDBtn)
         
         infoContainerView.snp.makeConstraints { make in
             make.centerX.centerY.equalToSuperview()
@@ -87,7 +91,7 @@ class ProfileHeaderView: UIView {
         }
         
         nameStackView.snp.makeConstraints { make in
-            make.leading.centerY.equalToSuperview()
+            make.leading.equalToSuperview()
             make.trailing.greaterThanOrEqualTo(avatarImageView.snp.leading)
             make.top.greaterThanOrEqualToSuperview().offset(8)
             make.bottom.lessThanOrEqualToSuperview().offset(-8)
@@ -97,7 +101,6 @@ class ProfileHeaderView: UIView {
             make.top.trailing.bottom.equalToSuperview()
             make.width.equalTo(avatarImageView.snp.height).multipliedBy(52.0/54.0)
         }
-        
     }
 
 }

@@ -26,14 +26,4 @@ extension UIView {
     }
     
     
-    //MARK: Properties
-    
-    //MARK: Subviews
-
-    //MARK: init
-    
-    //MARK: Life Cycle
-    
-    //MARK: Private Functions
-    
 }

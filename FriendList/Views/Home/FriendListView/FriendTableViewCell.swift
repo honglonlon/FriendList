@@ -22,13 +22,6 @@ class FriendTableViewCell: UITableViewCell {
     private var invitingTrailingConstraint: Constraint?
     private var moreTrailingConstraint:     Constraint?
     
-    var friend: Friend? {
-        didSet {
-            guard let friend = friend else { return }
-            nameLabel.text = friend.name
-        }
-    }
-    
     //MARK: Subviews
     private let starImageView : UIImageView = {
         let imageView = UIImageView(image: UIImage(named: "icFriendsStar"))
@@ -75,14 +68,14 @@ class FriendTableViewCell: UITableViewCell {
         
         var config = UIButton.Configuration.filled()
         config.attributedTitle = title
-        config.baseForegroundColor = .btnlightGrey
+        config.baseForegroundColor = .btnLightGrey
         config.baseBackgroundColor = .clear
         config.contentInsets = NSDirectionalEdgeInsets(top: 3, leading: 8, bottom: 3, trailing: 8)
         
         let btn = UIButton(configuration: config, primaryAction: nil)
         btn.layer.cornerRadius = 2
         btn.layer.borderWidth = 1
-        btn.layer.borderColor = UIColor.btnlightGrey.cgColor
+        btn.layer.borderColor = UIColor.btnLightGrey.cgColor
         btn.layer.masksToBounds = true
         
         return btn
@@ -90,7 +83,7 @@ class FriendTableViewCell: UITableViewCell {
     
     private let moreBtn: UIButton = {
         var config = UIButton.Configuration.filled()
-        config.baseForegroundColor = .btnlightGrey
+        config.baseForegroundColor = .btnLightGrey
         config.baseBackgroundColor = .clear
         config.contentInsets = NSDirectionalEdgeInsets(top: 3, leading: 10, bottom: 3, trailing: 10)
         config.image = UIImage(named: "icFriendsMore")
@@ -121,6 +114,20 @@ class FriendTableViewCell: UITableViewCell {
     override func layoutSubviews() {
         super.layoutSubviews()
         avatarImageView.layer.cornerRadius = avatarImageView.bounds.width / 2
+    }
+    
+    func setFriend(friend: Friend) {
+        nameLabel.text = friend.name
+        if friend.isTop == "0" {
+            starImageView.isHidden = true
+        } else {
+            starImageView.isHidden = false
+        }
+        if friend.status == .inviteSent {
+            showsInviting = true
+        } else {
+            showsInviting = false
+        }
     }
     
     //MARK: Private Functions
