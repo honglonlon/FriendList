@@ -12,4 +12,5 @@
 3. 好友列表支援下拉更新（重新呼叫 API 請求）  
 4. 邀請列表支援摺疊／展開操作  
 
-![操作示範](./assets/demo.gif)
+## 操作影片
+https://drive.google.com/file/d/1ZXlHzRo--L0tco6zGvFqNmKyyRkGZKv_/view?usp=sharing
