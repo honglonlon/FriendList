@@ -8,16 +8,79 @@
 import UIKit
 import Combine
 
+enum FriendListMode: String {
+    case noFriend           = "無好友"
+    case onlyFriend         = "只有好友"
+    case friendWithInvite   = "有好友含邀請"
+}
+
 class HomeViewModel {
+    //MARK: Input
+    struct Input {
+        let loadUserInfo: AnyPublisher<Void, Never>
+        let loadFriendList: AnyPublisher<Void, Never>
+        let modeChange: AnyPublisher<FriendListMode, Never>
+    }
     
-    @Published var userInfo: UserInfo?
-    @Published var friendList: [Friend] = []
-    @Published var invitingList: [Friend] = []
-    @Published var errorMessage: String? = nil
+    //MARK: Output
+    struct Output {
+        let userInfo: AnyPublisher<UserInfo?, Never>
+        let friendList: AnyPublisher<[Friend], Never>
+        let invitingList: AnyPublisher<[Friend], Never>
+        let errorMessage: AnyPublisher<String?, Never>
+        let friendListMode: AnyPublisher<FriendListMode, Never>
+    }
     
-    private var cancellables: Set<AnyCancellable> = []
     
-    func getUserInfo() {
+    //MARK: Properties
+    @Published private(set) var userInfo: UserInfo?
+    @Published private(set) var friendList: [Friend] = []
+    @Published private(set) var invitingList: [Friend] = []
+    @Published private(set) var errorMessage: String? = nil
+    @Published private(set) var friendListMode: FriendListMode = .noFriend
+    private var cancellables = Set<AnyCancellable>()
+    
+    
+    //MARK: Transform
+    func transform(input: Input) -> Output {
+        input.modeChange
+            .sink { [weak self] mode in
+                self?.friendListMode = mode
+                switch mode {
+                case .noFriend:
+                    self?.getEmptyList()
+                case .onlyFriend:
+                    self?.getFriendList()
+                case .friendWithInvite:
+                    self?.getFriendListWithInviting()
+                }
+            }
+            .store(in: &cancellables)
+        
+        input.loadFriendList
+            .sink {[weak self] _ in
+                self?.getEmptyList()
+            }
+            .store(in: &cancellables)
+        
+        input.loadUserInfo
+            .sink { [weak self] _ in
+                self?.getUserInfo()
+            }
+            .store(in: &cancellables)
+        
+        return Output(
+            userInfo: $userInfo.eraseToAnyPublisher(),
+            friendList: $friendList.eraseToAnyPublisher(),
+            invitingList: $invitingList.eraseToAnyPublisher(),
+            errorMessage: $errorMessage.eraseToAnyPublisher(),
+            friendListMode: $friendListMode.eraseToAnyPublisher()
+        )
+    }
+    
+    
+    //MARK: Private function
+    private func getUserInfo() {
         NetworkManager.shared.getUserInfo()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] compeletion in
@@ -34,7 +97,7 @@ class HomeViewModel {
             .store(in: &cancellables)
     }
     
-    func getEmptyList() {
+    private func getEmptyList() {
         NetworkManager.shared.getFriendList(from: APIEndpoint.friend4.url)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
@@ -51,8 +114,7 @@ class HomeViewModel {
             .store(in: &cancellables)
     }
     
-    
-    func getFriendList() {
+    private func getFriendList() {
         let publisher1 = NetworkManager.shared.getFriendList(from: APIEndpoint.friend1.url)
         let publisher2 = NetworkManager.shared.getFriendList(from: APIEndpoint.friend2.url)
         
@@ -84,8 +146,7 @@ class HomeViewModel {
             .store(in: &cancellables)
     }
     
-    
-    func getFriendListWithInviting() {
+    private func getFriendListWithInviting() {
         NetworkManager.shared.getFriendList(from: APIEndpoint.friend3.url)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
@@ -108,8 +169,6 @@ class HomeViewModel {
             }
             .store(in: &cancellables)
     }
-    
-    
     
     
 }

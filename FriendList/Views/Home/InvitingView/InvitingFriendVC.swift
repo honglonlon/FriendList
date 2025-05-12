@@ -12,8 +12,9 @@ import SnapKit
 class InvitingFriendVC: UIViewController {
 
     //MARK: Properties
-    let viewModel = InvitingFriendViewModel()
-    private var cancellables = Set<AnyCancellable>()
+    private let viewModel       = InvitingFriendViewModel()
+    private let tapSubject      = PassthroughSubject<Void, Never>()
+    private var cancellables    = Set<AnyCancellable>()
     
     
     //MARK: Subviews
@@ -33,28 +34,25 @@ class InvitingFriendVC: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         configureUI()
-        bindViewModel()
     }
     
     
-    //MARK: Private Functions
-    private func configureUI() {
-        view.addSubview(collectionView)
+    // MARK: - Injection
+    func configure(invitingListPublisher: AnyPublisher<[Friend], Never>) {
+        let input = InvitingFriendViewModel.Input(
+            invitingFriends: invitingListPublisher,
+            tap: tapSubject.eraseToAnyPublisher()
+        )
         
-        collectionView.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
-        }
-    }
-    
-    private func bindViewModel() {
-        viewModel.$invitingFriend
-            .receive(on: DispatchQueue.main)
+        let output = viewModel.transform(input: input)
+        
+        output.invitingFriends
             .sink { [weak self] _ in
                 self?.collectionView.reloadData()
             }
             .store(in: &cancellables)
         
-        viewModel.$isExpanded
+        output.isExpanded
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self = self else { return }
@@ -68,25 +66,35 @@ class InvitingFriendVC: UIViewController {
                 }
             }
             .store(in: &cancellables)
-        
     }
+    
+    
+    //MARK: Private Functions
+    private func configureUI() {
+        view.addSubview(collectionView)
+        collectionView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+    }
+    
 }
 
 
+//MARK: UICollectionViewDataSource
 extension InvitingFriendVC: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return viewModel.invitingFriend.count
+        return viewModel.invitingFriends.count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: InvitingFriendCell.reuseID, for: indexPath) as! InvitingFriendCell
-        let friend = viewModel.invitingFriend[indexPath.item]
+        let friend = viewModel.invitingFriends[indexPath.item]
         cell.setInvitingFriend(friend: friend)
         return cell
     }
     
     func collectionView(_ cv: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        viewModel.tapSubject.send()
+        tapSubject.send()
     }
 }

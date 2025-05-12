@@ -11,18 +11,13 @@ import Combine
 
 class HomeVC: UIViewController {
     
-    enum FriendListMode: String {
-        case noFriend           = "無好友"
-        case onlyFriend         = "只有好友"
-        case friendWithInvite   = "有好友含邀請"
-    }
-    
     //MARK: Properties
-    private let viewModel = HomeViewModel()
-    private var cancellables: Set<AnyCancellable> = []
-    private var friendListMode: FriendListMode = .noFriend {
-        didSet { sendSearchEvent(mode: friendListMode) }
-    }
+    private let viewModel               = HomeViewModel()
+    private let loadFriendListSubject   = PassthroughSubject<Void, Never>()
+    private let loadUserInfoSubject     = PassthroughSubject<Void, Never>()
+    private let modeChangeSubject       = PassthroughSubject<FriendListMode, Never>()
+    private var cancellables            = Set<AnyCancellable>()
+    
     private var friendListTopToSafe: Constraint?
     private var friendListTopToPager: Constraint?
     private var invitingFriendViewExpand: Constraint?
@@ -57,14 +52,22 @@ class HomeVC: UIViewController {
         friendListVC.delegate = self
         setUpNavbarItems()
         configureUI()
-        bindViewModel()
-        viewModel.getUserInfo()
-        viewModel.getEmptyList()
+        
+        let input = HomeViewModel.Input(loadUserInfo: loadUserInfoSubject.eraseToAnyPublisher(),
+                                        loadFriendList: loadFriendListSubject.eraseToAnyPublisher(),
+                                        modeChange: modeChangeSubject.eraseToAnyPublisher())
+        let output = viewModel.transform(input: input)
+        bind(output: output)
+        friendListVC.configure(friendListPublisher: output.friendList)
+        invitingFriendVC.configure(invitingListPublisher: output.invitingList)
+        loadUserInfoSubject.send()
+        loadFriendListSubject.send()
     }
     
-    //MARK: Private func
-    private func bindViewModel() {
-        viewModel.$userInfo
+    
+    //MARK: Private functions
+    private func bind(output: HomeViewModel.Output) {
+        output.userInfo
             .compactMap { $0 }
             .receive(on: DispatchQueue.main)
             .sink { [weak self] userInfo in
@@ -72,25 +75,18 @@ class HomeVC: UIViewController {
             }
             .store(in: &cancellables)
         
-        viewModel.$friendList
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] friendList in
-                self?.friendListVC.viewModel.setFriendListData(list: friendList)
-            }
-            .store(in: &cancellables)
-        
-        viewModel.$invitingList
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] invitingList in
-                self?.invitingFriendVC.viewModel.setInvitingFriends(invitingList)
-            }
-            .store(in: &cancellables)
-
-        viewModel.$errorMessage
+        output.errorMessage
             .compactMap { $0 }
             .receive(on: DispatchQueue.main)
             .sink { [weak self] errorMessage in
                 self?.presentErrorAlert(message: errorMessage)
+            }
+            .store(in: &cancellables)
+        
+        output.friendListMode
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] mode in
+                self?.updateLayout(for: mode)
             }
             .store(in: &cancellables)
     }
@@ -98,7 +94,7 @@ class HomeVC: UIViewController {
     private func setUpNavbarItems() {
         // 左邊第1個按鈕
         let barBtnWithDraw = UIBarButtonItem(
-            image: UIImage(named: "icNavPinkWithdraw"), // 替換成你的圖片名稱
+            image: UIImage(named: "icNavPinkWithdraw"),
             style: .plain,
             target: self,
             action: #selector(navbarButtonTapped)
@@ -127,20 +123,17 @@ class HomeVC: UIViewController {
         navigationItem.rightBarButtonItem = barBtnScan
     }
     
-    private func sendSearchEvent(mode: FriendListMode) {
+    private func updateLayout(for mode: FriendListMode) {
         switch mode {
-        case .noFriend:
-            viewModel.getEmptyList()
-            invitingFriendViewCollapse?.activate()
-            invitingFriendViewExpand?.deactivate()
-        case .onlyFriend:
-            viewModel.getFriendList()
+        case .noFriend, .onlyFriend:
             invitingFriendViewCollapse?.activate()
             invitingFriendViewExpand?.deactivate()
         case .friendWithInvite:
-            viewModel.getFriendListWithInviting()
             invitingFriendViewCollapse?.deactivate()
             invitingFriendViewExpand?.activate()
+        }
+        UIView.animate(withDuration: 0.25) {
+            self.view.layoutIfNeeded()
         }
     }
     
@@ -189,7 +182,9 @@ class HomeVC: UIViewController {
         let names = [FriendListMode.noFriend.rawValue, FriendListMode.onlyFriend.rawValue, FriendListMode.friendWithInvite.rawValue]
         for name in names {
            let action = UIAlertAction(title: name, style: .default) { action in
-               self.friendListMode = FriendListMode(rawValue: name)!
+               if let mode = FriendListMode(rawValue: name) {
+                   self.modeChangeSubject.send(mode)
+               }
            }
            controller.addAction(action)
         }
@@ -202,7 +197,7 @@ class HomeVC: UIViewController {
 
 extension HomeVC: FriendListVCDelegate {
     func didRequestRefreshBy(friendListVC: FriendListVC) {
-        sendSearchEvent(mode: self.friendListMode)
+        modeChangeSubject.send(viewModel.friendListMode)
     }
     
     func didChangeSearchEditingBy(friendListVC: FriendListVC, isEditing: Bool) {

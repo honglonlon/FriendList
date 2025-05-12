@@ -21,8 +21,10 @@ class FriendListVC: UIViewController {
     
     //MARK: Properties
     weak var delegate: FriendListVCDelegate?
-    let viewModel = FriendListViewModel()
-    private var cancellables = Set<AnyCancellable>()
+    private let viewModel       = FriendListViewModel()
+    private var cancellables    = Set<AnyCancellable>()
+    private var keywordSubject  = CurrentValueSubject<String, Never>("")
+    
     
     private lazy var refreshControl: UIRefreshControl = {
         let rc = UIRefreshControl()
@@ -80,24 +82,31 @@ class FriendListVC: UIViewController {
         super.viewDidLoad()
         searchBar.delegate = self
         configureUI()
-        bindViewModel()
     }
     
     
-    //MARK: Private Functions
-    private func bindViewModel() {
+    // MARK: - Injection
+    /// 由父層注入好友 Publisher 並啟動 ViewModel
+    func configure(friendListPublisher: AnyPublisher<[Friend], Never>) {
+        let input = FriendListViewModel.Input(
+            friends: friendListPublisher,
+            keyword: keywordSubject.eraseToAnyPublisher()
+        )
+        let output = viewModel.transform(input: input)
         
-        viewModel.$showEmptyView
+        // 綁定空畫面顯示
+        output.showEmptyView
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] showEmpty in
-                self?.emptyView.isHidden = !showEmpty
-                self?.tableView.isHidden = showEmpty
+            .sink { [weak self] show in
+                self?.emptyView.isHidden = !show
+                self?.tableView.isHidden = show
             }
             .store(in: &cancellables)
-
-        viewModel.$filteredFriends
+        
+        // 綁定好友資料刷新
+        output.filteredFriends
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] list in
+            .sink { [weak self] _ in
                 self?.tableView.refreshControl?.endRefreshing()
                 self?.tableView.reloadData()
             }
@@ -174,7 +183,7 @@ extension FriendListVC: UITableViewDataSource, UITableViewDelegate {
 // MARK: - UISearchBarDelegate
 extension FriendListVC: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        viewModel.keyword = searchText
+        keywordSubject.send(searchText)
     }
     
     func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {

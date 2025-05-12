@@ -27,15 +27,15 @@ class StackedFlowLayout: UICollectionViewFlowLayout {
     
     override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
         
-        guard let attrs = super.layoutAttributesForElements(in: rect),
-              let vm    = viewModel else { return nil }
+        guard let attrs     = super.layoutAttributesForElements(in: rect),
+              let viewModel = viewModel else { return nil }
         
-        let cardCount  = vm.invitingFriend.count
+        let cardCount  = viewModel.invitingFriends.count
         
         for attr in attrs {
             let idx = attr.indexPath.item
             
-            if vm.isExpanded {
+            if viewModel.isExpanded {
                 // 展開狀態
                 attr.frame.origin.y = CGFloat(idx) * (cardHeight + expandedSpacing)
                 attr.transform      = .identity
@@ -53,9 +53,9 @@ class StackedFlowLayout: UICollectionViewFlowLayout {
     
     // 收合時 contentSize 只需到最底張卡
     override var collectionViewContentSize: CGSize {
-        guard let vm = viewModel else { return .zero }
-        if !vm.isExpanded {
-            let h = cardHeight + CGFloat(vm.invitingFriend.count - 1) * collapsedOffset
+        guard let viewModel = viewModel else { return .zero }
+        if !viewModel.isExpanded {
+            let h = cardHeight + CGFloat(viewModel.invitingFriends.count - 1) * collapsedOffset
             return .init(width: collectionView!.bounds.width, height: h)
         }
         return super.collectionViewContentSize

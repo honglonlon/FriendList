@@ -9,28 +9,39 @@ import Foundation
 import Combine
 
 class InvitingFriendViewModel {
+    // MARK: - Input
+    struct Input {
+        let invitingFriends: AnyPublisher<[Friend], Never>
+        let tap: AnyPublisher<Void, Never>
+    }
+    
+    // MARK: - Output
+    struct Output {
+        let invitingFriends: AnyPublisher<[Friend], Never>
+        let isExpanded: AnyPublisher<Bool, Never>
+    }
+    
     //MARK: Properties
-    @Published private(set) var invitingFriend: [Friend] = []
+    @Published private(set) var invitingFriends: [Friend] = []
     @Published private(set) var isExpanded: Bool = false
-    // 點擊卡片
-    let tapSubject = PassthroughSubject<Void, Never>()
     private var cancellables = Set<AnyCancellable>()
     
     
-    //MARK: Init
-    init() {
-        tapSubject
+    // MARK: - Transform
+    func transform(input: Input) -> Output {
+        input.invitingFriends
+            .assign(to: &$invitingFriends)
+    
+        input.tap
             .sink { [weak self] in
                 self?.isExpanded.toggle()
             }
             .store(in: &cancellables)
+        
+        return Output(
+            invitingFriends: $invitingFriends.eraseToAnyPublisher(),
+            isExpanded: $isExpanded.eraseToAnyPublisher()
+        )
     }
-    
-    
-    //MARK: Public Function
-    func setInvitingFriends(_ friends: [Friend]) {
-        self.invitingFriend = friends
-    }
-    
     
 }
