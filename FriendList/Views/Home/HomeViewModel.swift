@@ -5,7 +5,7 @@
 //  Created by 楊豐榮 on 2025/5/3.
 //
 
-import UIKit
+import Foundation
 import Combine
 
 enum FriendListMode: String {
@@ -39,6 +39,13 @@ class HomeViewModel {
     @Published private(set) var errorMessage: String? = nil
     @Published private(set) var friendListMode: FriendListMode = .noFriend
     private var cancellables = Set<AnyCancellable>()
+    private let network: NetworkService
+    
+    
+    //MARK: Init
+    init(network: NetworkService = NetworkManager()) {
+        self.network = network
+    }
     
     
     //MARK: Transform
@@ -81,7 +88,7 @@ class HomeViewModel {
     
     //MARK: Private function
     private func getUserInfo() {
-        NetworkManager.shared.getUserInfo()
+        network.getUserInfo()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] compeletion in
                 switch compeletion {
@@ -98,7 +105,7 @@ class HomeViewModel {
     }
     
     private func getEmptyList() {
-        NetworkManager.shared.getFriendList(from: APIEndpoint.friend4.url)
+        network.getFriendList(from: APIEndpoint.friend4.url)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
                 switch completion {
@@ -115,8 +122,8 @@ class HomeViewModel {
     }
     
     private func getFriendList() {
-        let publisher1 = NetworkManager.shared.getFriendList(from: APIEndpoint.friend1.url)
-        let publisher2 = NetworkManager.shared.getFriendList(from: APIEndpoint.friend2.url)
+        let publisher1 = network.getFriendList(from: APIEndpoint.friend1.url)
+        let publisher2 = network.getFriendList(from: APIEndpoint.friend2.url)
         
         Publishers.Zip(publisher1, publisher2)
             .map { list1, list2 -> [Friend] in
@@ -147,7 +154,7 @@ class HomeViewModel {
     }
     
     private func getFriendListWithInviting() {
-        NetworkManager.shared.getFriendList(from: APIEndpoint.friend3.url)
+        network.getFriendList(from: APIEndpoint.friend3.url)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
                 switch completion {

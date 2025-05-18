@@ -8,16 +8,25 @@
 import Foundation
 import Combine
 
-class NetworkManager {
+protocol NetworkService {
+    func getUserInfo() -> AnyPublisher<UserInfo, Error>
+    func getFriendList(from url: URL?) -> AnyPublisher<[Friend], Error>
+}
+
+class NetworkManager: NetworkService {
     
-    static let shared = NetworkManager()
+    private let urlSession: URLSession
+    
+    init(urlSession: URLSession = URLSession.shared) {
+        self.urlSession = urlSession
+    }
 
     func getUserInfo() -> AnyPublisher<UserInfo, Error> {
         guard let url = APIEndpoint.user.url else {
             return Fail(error: URLError(.badURL)).eraseToAnyPublisher()
         }
         
-        return URLSession.shared.dataTaskPublisher(for: url)
+        return urlSession.dataTaskPublisher(for: url)
             .tryMap { (data, response) -> Data in
                 guard let httpResponse = response as? HTTPURLResponse,
                       (200...299).contains(httpResponse.statusCode) else {
@@ -43,7 +52,7 @@ class NetworkManager {
             return Fail(error: URLError(.badURL)).eraseToAnyPublisher()
         }
         
-        return URLSession.shared.dataTaskPublisher(for: url)
+        return urlSession.dataTaskPublisher(for: url)
             .tryMap { (data, response) -> Data in
                 guard let httpResponse = response as? HTTPURLResponse,
                       (200...299).contains(httpResponse.statusCode) else {
